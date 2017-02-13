@@ -1,0 +1,17 @@
+<resources>
+    <string name="title_activity_maps">Map</string>
+    <string name="app_name">FB活動搜尋APP</string>
+    <string name="searchStr">搜尋活動</string>
+    <string name="locationStr">位置</string>
+    <string name="radiusStr">半徑</string>
+    <string name="startTimeStr">開始時間</string>
+    <string name="amountStr">數量</string>
+    <string name="endTimeStr">結束時間</string>
+    <string name="searchResultFrg">searchResultFrg</string>
+
+    <string name="eventTitle">名稱: </string>
+    <string name="eventTime">時間: </string>
+    <string name="eventAddress">地點: </string>
+    <string name="eventHttp">連結: </string>
+
+</resources>
