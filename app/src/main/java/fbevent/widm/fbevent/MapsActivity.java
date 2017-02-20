@@ -5,9 +5,7 @@ import android.app.FragmentTransaction;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
-import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
-import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -15,14 +13,13 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.SearchView;
-import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.io.DataOutputStream;
@@ -34,7 +31,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 
-import DataType.FBShopActivityDescription;
 import Solr.SearchResultShopData;
 import Solr.ShopData;
 
@@ -49,7 +45,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     // parameter
     private ArrayList<ShopData> shopDataList;
-    private String ResultStr="";
+    private String ResultStr = "";
     private int isSuccess = 0;
     private String GPS = "";// "lat,lng"
     private String radius = "1";// /km
@@ -74,7 +70,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 SearchResultFragment searchResultFragment =
                         (SearchResultFragment) manager.findFragmentByTag("searchResultFragment");
 
-                if(searchResultFragment != null){
+                if (searchResultFragment != null) {
                     FragmentTransaction transaction = manager.beginTransaction();
                     transaction.remove(searchResultFragment);
                     transaction.commit();
@@ -92,6 +88,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
     } // end onCreate()
 
     public void setOnBackPressedListener(OnBackPressedListener onBackPressedListener) {
@@ -99,28 +96,25 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     } // end setOnBackPressedListener()
 
     @Override
+    protected void onNewIntent(Intent intent){
+        Bundle bundle = intent.getExtras();
+        double latitude = bundle.getDouble("Latitude");
+        double longitude = bundle.getDouble("Longitude");
+        LatLng selectedLoc = new LatLng(longitude, latitude);
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(selectedLoc, 16.0f));
+    }
+
+    @Override
     public void onBackPressed() {
         if (onBackPressedListener != null) {
             onBackPressedListener.doBack();
-            Log.d("back","doBack");
-        }
-        else {
+            Log.d("back", "doBack");
+
+        } else {
             super.onBackPressed();
-            Log.d("back","else");
+            Log.d("back", "else");
         } // end if/else
     } // end onBackPressed();
-
-    private void getSelectedMarker(){
-        /*try {
-            Intent intent = getIntent();
-            Bundle bundle = intent.getExtras();
-            double latitude = bundle.getDouble("Latitude");
-            double longitude = bundle.getDouble("Longitude");
-            mMap.animateCamera(CameraUpdateFactory.newLatLng(new LatLng(latitude, longitude)));
-        }catch (NullPointerException ex){
-            ex.printStackTrace();
-        }*/
-    } // end getSelectedMarker()
 
     private void query() {
 
@@ -167,27 +161,29 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         } // end try/catch
     } // end query()
 
-    private void addToMap(){
+    private void addToMap() {
         for (ShopData sd : shopDataList)
             mMap.addMarker(new MarkerOptions()
-                             .position(new LatLng(sd.getLatitude(),sd.getLongitude()))
-                             .title(sd.getTitle()));
+                                   .position(new LatLng(sd.getLatitude(), sd.getLongitude()))
+                                   .title(sd.getTitle()));
         mMap.moveCamera(CameraUpdateFactory.zoomTo(12.0f));
     } // end addToMap()
 
-    private void sendEventInfo(){
+    private void sendEventInfo() {
         FragmentManager manager = getFragmentManager();
         FragmentTransaction transaction = manager.beginTransaction();
+        //transaction.setCustomAnimations(R.anim.enter, R.anim.exit, R.anim.pop_enter, R.anim.pop_exit);
         SearchResultFragment searchResultFragment = new SearchResultFragment();
 
         // step 3. Send ResultStr to SearchResultFragment
         Bundle bundle = new Bundle();
         bundle.putParcelableArrayList("shopDataList", shopDataList);
 
-        Log.d("size",String.valueOf(shopDataList.size()));
+        Log.d("size", String.valueOf(shopDataList.size()));
 
         transaction.replace(R.id.searchFragment, searchResultFragment, "searchResultFragment");
         searchResultFragment.setArguments(bundle);
+        transaction.addToBackStack(null);
         transaction.commit();
     } // end sendEventInfo()
 
@@ -204,10 +200,19 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        // Add a marker in Sydney and move the camera
-        LatLng NCU = new LatLng(24.9684297,121.1959266);
+        LatLng NCU = new LatLng(24.9684297, 121.1959266);
         mMap.addMarker(new MarkerOptions().position(NCU).title("Marker in NCU"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(NCU,16.0f));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(NCU, 16.0f));
+
+        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener(){
+            @Override
+            public boolean onMarkerClick(Marker marker) {
+                Log.d("click marker", String.valueOf(marker.getPosition()));
+                //這邊做跳出詳細資訊的fragmemt
+                return false;
+            }
+        });
+
     } // end onMapReady()
 
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -221,12 +226,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         // Assumes current activity is the searchable activity
         searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
-        searchView.setOnQueryTextListener(new android.support.v7.widget.SearchView.OnQueryTextListener(){
+        searchView.setOnQueryTextListener(new android.support.v7.widget.SearchView.OnQueryTextListener() {
 
             @Override
             public boolean onQueryTextSubmit(String s) {
-                Thread thread = new Thread(){
-                    public void run(){
+                Thread thread = new Thread() {
+                    public void run() {
                         query();
                         sendEventInfo();
                     }
@@ -235,7 +240,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 try {
                     thread.join();
                     addToMap();
-                }catch (Exception ex){
+                } catch (Exception ex) {
                     ex.printStackTrace();
                 } // end try/catch
                 return true;

@@ -51,7 +51,7 @@ public class SearchResultFragment extends Fragment {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                 EventMember em = (EventMember) adapterView.getItemAtPosition(i);
-                //pointToMarker(em.getLatitude(),em.getLongitude());
+                sendSelectedLoc(em.getLatitude(),em.getLongitude());
                 hideFragment();
             }
         });
@@ -65,8 +65,9 @@ public class SearchResultFragment extends Fragment {
         transaction.commit();
     } // end hideFragment()
 
-    private void pointToMarker(double latitude, double longitude){
+    private void sendSelectedLoc(double latitude, double longitude){
         Intent intent = new Intent(getActivity().getBaseContext(), MapsActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         Bundle bundle = new Bundle();
         bundle.putDouble("Latitude", latitude);
         bundle.putDouble("Longitude", longitude);
