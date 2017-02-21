@@ -37,6 +37,7 @@ public class EventDetailFragment extends Fragment {
         Log.d("eventFrg", Description);
         Log.d("eventFrg", Http);
 
+        //
         mTitleTxt = (TextView) getActivity().findViewById(R.id.titleTxt);
         mDescriptionTxt = (TextView) getActivity().findViewById(R.id.descriptionTxt);
         mHttpTxt = (TextView) getActivity().findViewById(R.id.httpTxt);
