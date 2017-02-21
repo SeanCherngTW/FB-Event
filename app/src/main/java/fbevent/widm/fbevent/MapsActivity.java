@@ -40,17 +40,24 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected OnBackPressedListener onBackPressedListener;
     private Toolbar toolbar;
 
-    static String address = "powerpoi.widm.csie.ncu.edu.tw";
-    static int port = 30;
+    static final String address = "powerpoi.widm.csie.ncu.edu.tw";
+    static final int port = 30;
 
     // parameter
     private ArrayList<ShopData> shopDataList;
+    private ArrayList<ShopData> filertedShopDataList;
     private String ResultStr = "";
     private int isSuccess = 0;
     private String GPS = "";// "lat,lng"
     private String radius = "1";// /km
     private String quantity = "10";// don't need to care
     private int whichFucntion = 0;// don't need to care
+
+    private String Title = "", Description = "", Http = "";
+
+    /*******************************
+     * Layout and Map
+     ******************************/
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,38 +92,109 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         getSupportActionBar().setHomeButtonEnabled(true);
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-
     } // end onCreate()
+
+
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        mMap = googleMap;
+        LatLng NCU = new LatLng(24.9684297, 121.1959266);
+        mMap.addMarker(new MarkerOptions().position(NCU).title("Marker in NCU"));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(NCU, 16.0f));
+        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+            @Override
+            public boolean onMarkerClick(Marker marker) {
+
+                FragmentManager manager = getFragmentManager();
+                FragmentTransaction transaction = manager.beginTransaction();
+                EventDetailFragment eventDetailFragment = new EventDetailFragment();
+
+                // step 3. Send ResultStr to SearchResultFragment
+                Bundle bundle = new Bundle();
+                bundle.putString("Title", Title);
+                bundle.putString("Description", Description);
+                bundle.putString("Http", Http);
+                transaction.replace(R.id.eventDetailFragment, eventDetailFragment, "eventDetailFragment");
+                transaction.addToBackStack("eventDetailFragment");
+                eventDetailFragment.setArguments(bundle);
+                transaction.commit();
+                Log.d("click marker", String.valueOf(marker.getPosition()));
+                return false;
+            } // end onMarkerClick()
+        }); // end setOnMarkerClickListener()
+    } // end onMapReady()
+
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu_main, menu);
+
+        MenuItem menuSearchItem = menu.findItem(R.id.my_search);
+        SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
+        android.support.v7.widget.SearchView searchView =
+                (android.support.v7.widget.SearchView) menuSearchItem.getActionView();
+
+        // Assumes current activity is the searchable activity
+        searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+        searchView.setOnQueryTextListener(new android.support.v7.widget.SearchView.OnQueryTextListener() {
+
+            @Override
+            public boolean onQueryTextSubmit(String s) {
+                final String Query = s;
+                Thread thread = new Thread() {
+                    public void run() {
+                        query(Query);
+                        sendEventInfo();
+                    } // end run()
+                }; // end thread
+                thread.start();
+                try {
+                    thread.join();
+                    addMarkerToMap();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                } // end try/catch
+                return true;
+            } // end onQueryTextSubmit()
+
+            @Override
+            public boolean onQueryTextChange(String s) {
+                return true;
+            }
+        }); // end setOnQueryTextListener()
+        return true;
+    } // end onCreateOptionsMenu()
+
+    /******************************* Layout and Map ******************************/
+
+    /*******************************
+     * Back Button Handler
+     ******************************/
 
     public void setOnBackPressedListener(OnBackPressedListener onBackPressedListener) {
         this.onBackPressedListener = onBackPressedListener;
     } // end setOnBackPressedListener()
 
     @Override
-    protected void onNewIntent(Intent intent){
-        Bundle bundle = intent.getExtras();
-        double latitude = bundle.getDouble("Latitude");
-        double longitude = bundle.getDouble("Longitude");
-        LatLng selectedLoc = new LatLng(longitude, latitude);
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(selectedLoc, 16.0f));
-    }
-
-    @Override
     public void onBackPressed() {
         if (onBackPressedListener != null) {
             onBackPressedListener.doBack();
             Log.d("back", "doBack");
-
         } else {
             super.onBackPressed();
             Log.d("back", "else");
         } // end if/else
     } // end onBackPressed();
 
-    private void query() {
+    /******************************* Back Button Handler ******************************/
+
+
+    /*******************************
+     * Get Events
+     ******************************/
+
+    private void query(String s) {
 
         GPS = "24.9684297,121.1959266";
 
@@ -146,7 +224,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             SearchResultShopData searchResultShopData = (SearchResultShopData) obj;
             isSuccess = searchResultShopData.getStaut();
             shopDataList = searchResultShopData.getShopDataList();
-
+            filertedShopDataList = new ArrayList<>();
+            for (ShopData sd : shopDataList) {
+                if (sd.getTitle().contains(s))
+                    filertedShopDataList.add(sd);
+            } // end for
             out.flush();
             out.close();
             in.close();
@@ -158,11 +240,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             System.err.println("ClassNotFoundException :" + e.toString());
         } catch (Exception e) {
             System.err.println("Exception :" + e.toString());
-        } // end try/catch
+        }// end try/catch
     } // end query()
 
-    private void addToMap() {
-        for (ShopData sd : shopDataList)
+    private void addMarkerToMap() {
+        for (ShopData sd : filertedShopDataList)
             mMap.addMarker(new MarkerOptions()
                                    .position(new LatLng(sd.getLatitude(), sd.getLongitude()))
                                    .title(sd.getTitle()));
@@ -172,85 +254,30 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private void sendEventInfo() {
         FragmentManager manager = getFragmentManager();
         FragmentTransaction transaction = manager.beginTransaction();
-        //transaction.setCustomAnimations(R.anim.enter, R.anim.exit, R.anim.pop_enter, R.anim.pop_exit);
         SearchResultFragment searchResultFragment = new SearchResultFragment();
 
         // step 3. Send ResultStr to SearchResultFragment
         Bundle bundle = new Bundle();
-        bundle.putParcelableArrayList("shopDataList", shopDataList);
-
-        Log.d("size", String.valueOf(shopDataList.size()));
-
-        transaction.replace(R.id.searchFragment, searchResultFragment, "searchResultFragment");
+        bundle.putParcelableArrayList("shopDataList", filertedShopDataList);
+        transaction.add(R.id.searchFragment, searchResultFragment, "searchResultFragment");
+        transaction.addToBackStack("searchResultFragment");
         searchResultFragment.setArguments(bundle);
-        transaction.addToBackStack(null);
         transaction.commit();
     } // end sendEventInfo()
 
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
     @Override
-    public void onMapReady(GoogleMap googleMap) {
-        mMap = googleMap;
+    protected void onNewIntent(Intent intent) {
+        // Get selected event from searchResultFragment
+        Bundle bundle = intent.getExtras();
+        double latitude = bundle.getDouble("Latitude");
+        double longitude = bundle.getDouble("Longitude");
+        Title = bundle.getString("Title");
+        Description = bundle.getString("Description");
+        Http = bundle.getString("Http");
+        LatLng selectedLoc = new LatLng(longitude, latitude);
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(selectedLoc, 16.0f));
+    } // end onNewIntent()
 
-        LatLng NCU = new LatLng(24.9684297, 121.1959266);
-        mMap.addMarker(new MarkerOptions().position(NCU).title("Marker in NCU"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(NCU, 16.0f));
+    /****************************** Get Events ******************************/
 
-        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener(){
-            @Override
-            public boolean onMarkerClick(Marker marker) {
-                Log.d("click marker", String.valueOf(marker.getPosition()));
-                //這邊做跳出詳細資訊的fragmemt
-                return false;
-            }
-        });
-
-    } // end onMapReady()
-
-    public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.menu_main, menu);
-
-        MenuItem menuSearchItem = menu.findItem(R.id.my_search);
-        SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
-        android.support.v7.widget.SearchView searchView =
-                (android.support.v7.widget.SearchView) menuSearchItem.getActionView();
-
-        // Assumes current activity is the searchable activity
-        searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
-        searchView.setOnQueryTextListener(new android.support.v7.widget.SearchView.OnQueryTextListener() {
-
-            @Override
-            public boolean onQueryTextSubmit(String s) {
-                Thread thread = new Thread() {
-                    public void run() {
-                        query();
-                        sendEventInfo();
-                    }
-                };
-                thread.start();
-                try {
-                    thread.join();
-                    addToMap();
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                } // end try/catch
-                return true;
-            } // end onQueryTextSubmit()
-
-            @Override
-            public boolean onQueryTextChange(String s) {
-                return true;
-            }
-        }); // end setOnQueryTextListener()
-        return true;
-    } // end onCreateOptionsMenu()
 } // end MapsActivity

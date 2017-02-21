@@ -43,20 +43,31 @@ public class SearchResultFragment extends Fragment {
 
         // step 4. To receive in fragment in Fragment onCreateView method
         shopDataList = getArguments().getParcelableArrayList("shopDataList");
-        Log.d("size", String.valueOf(shopDataList.size()));
 
         mEventListView = (ListView) view.findViewById(R.id.eventList);
         mEventListView.setAdapter(new MemberAdapter(getActivity()));
         mEventListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                EventMember em = (EventMember) adapterView.getItemAtPosition(i);
-                sendSelectedLoc(em.getLatitude(),em.getLongitude());
+                sendSelectedLoc((EventMember) adapterView.getItemAtPosition(i));
                 hideFragment();
-            }
-        });
+            } // end onItemClick()
+        }); // end setOnItemClickListener()
         return view;
     } // end onCreateView()
+
+    private void sendSelectedLoc(EventMember em){
+        Intent intent = new Intent(getActivity().getBaseContext(), MapsActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        Bundle bundle = new Bundle();
+        bundle.putDouble("Latitude", em.getLatitude());
+        bundle.putDouble("Longitude", em.getLongitude());
+        bundle.putString("Title", em.getTitle());
+        bundle.putString("Description", em.getDescription());
+        bundle.putString("Http", em.getHttp());
+        intent.putExtras(bundle);
+        getActivity().startActivity(intent);
+    } // end sendSelectedLoc()
 
     private void hideFragment(){
         FragmentManager manager = getFragmentManager();
@@ -64,16 +75,6 @@ public class SearchResultFragment extends Fragment {
         transaction.hide(this);
         transaction.commit();
     } // end hideFragment()
-
-    private void sendSelectedLoc(double latitude, double longitude){
-        Intent intent = new Intent(getActivity().getBaseContext(), MapsActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        Bundle bundle = new Bundle();
-        bundle.putDouble("Latitude", latitude);
-        bundle.putDouble("Longitude", longitude);
-        intent.putExtras(bundle);
-        getActivity().startActivity(intent);
-    }
 
     private class MemberAdapter extends BaseAdapter {
 
@@ -90,7 +91,8 @@ public class SearchResultFragment extends Fragment {
                 eventMemberList.add
                         (new EventMember(event.getTitle(), event.getStartDate(),
                                          event.getAddress(), event.getHttp(),
-                                         event.getLatitude(),event.getLongitude()));
+                                         event.getLatitude(),event.getLongitude(),
+                                         event.getDescription()));
             } // end for
         } // end MemberAdapter()
 
@@ -111,9 +113,8 @@ public class SearchResultFragment extends Fragment {
 
         @Override
         public View getView(int i, View view, ViewGroup viewGroup) {
-            if (view == null) {
+            if (view == null)
                 view = layoutInflater.inflate(R.layout.event_list_view_item, viewGroup, false);
-            }
 
             EventMember em = eventMemberList.get(i);
             TextView mTitleTxt = (TextView) view.findViewById(R.id.titleTxt);
