@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -26,20 +27,18 @@ import Solr.ShopData;
  * Created by Sean on 2017/2/7.
  */
 
-public class SearchResultFragment extends Fragment {
+public class SearchResultFragment extends Fragment implements View.OnKeyListener{
 
     private ListView mEventListView;
     private ArrayList<ShopData> shopDataList;
+    private FragmentManager manager;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
 
+        manager = getActivity().getFragmentManager();
         View view = inflater.inflate(R.layout.fragment_search_result, container, false);
-
-        Activity activity = getActivity();
-        ((MapsActivity)activity).setOnBackPressedListener
-                (new BaseBackPressedListener((android.support.v4.app.FragmentActivity)activity));
 
         // step 4. To receive in fragment in Fragment onCreateView method
         shopDataList = getArguments().getParcelableArrayList("shopDataList");
@@ -50,11 +49,18 @@ public class SearchResultFragment extends Fragment {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                 sendSelectedLoc((EventMember) adapterView.getItemAtPosition(i));
-                hideFragment();
+                removeFragment();
             } // end onItemClick()
         }); // end setOnItemClickListener()
         return view;
     } // end onCreateView()
+
+    @Override
+    public void onPause(){
+        super.onPause();
+        getActivity().getFragmentManager().beginTransaction().remove(this).commit();
+        Log.d("onPause","onPauseInSRF");
+    } // end onPause()
 
     private void sendSelectedLoc(EventMember em){
         Intent intent = new Intent(getActivity().getBaseContext(), MapsActivity.class);
@@ -63,18 +69,24 @@ public class SearchResultFragment extends Fragment {
         bundle.putDouble("Latitude", em.getLatitude());
         bundle.putDouble("Longitude", em.getLongitude());
         bundle.putString("Title", em.getTitle());
-        bundle.putString("Description", em.getDescription());
-        bundle.putString("Http", em.getHttp());
         intent.putExtras(bundle);
         getActivity().startActivity(intent);
     } // end sendSelectedLoc()
 
-    private void hideFragment(){
-        FragmentManager manager = getFragmentManager();
-        FragmentTransaction transaction = manager.beginTransaction();
-        transaction.hide(this);
-        transaction.commit();
+    private void removeFragment(){
+        manager.beginTransaction()
+                .remove(this)
+                .commit();
     } // end hideFragment()
+
+    @Override
+    public boolean onKey(View view, int i, KeyEvent keyEvent) {
+        if( i == KeyEvent.KEYCODE_BACK ) {
+            getFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+            return true;
+        } // end if
+        return false;
+    } // end onKey()
 
     private class MemberAdapter extends BaseAdapter {
 

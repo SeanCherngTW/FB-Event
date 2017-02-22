@@ -25,6 +25,12 @@
             android:layout_height="wrap_content">
         </FrameLayout>
 
+        <FrameLayout
+            android:id="@+id/eventDetailFragment"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+        </FrameLayout>
+
         <fragment
             xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:tools="http://schemas.android.com/tools"
@@ -34,12 +40,6 @@
             android:layout_height="match_parent"
             tools:context="fbevent.widm.fbevent.MapsActivity">
         </fragment>
-
-        <FrameLayout
-            android:id="@+id/eventDetailFragment"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-        </FrameLayout>
 
     </LinearLayout>
 </RelativeLayout>
